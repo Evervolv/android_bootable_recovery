@@ -974,7 +974,7 @@ void write_fstab_root(char *path, FILE *file)
 
     fprintf(file, "%s ", device);
     fprintf(file, "%s ", path);
-    fprintf(file, "%s rw\n", vol->fs_type);
+    fprintf(file, "%s rw\n", vol->fs_type2 != NULL ? "auto" : vol->fs_type);
 }
 
 void create_fstab()
@@ -986,6 +986,9 @@ void create_fstab()
         LOGW("Unable to create /etc/fstab!\n");
         return;
     }
+    Volume *vol = volume_for_path("/boot");
+    if (NULL != vol && strcmp(vol->fs_type, "mtd") != 0 && strcmp(vol->fs_type, "emmc") != 0 && strcmp(vol->fs_type, "bml") != 0)
+         write_fstab_root("/boot", file);
     write_fstab_root("/cache", file);
     write_fstab_root("/data", file);
     if (has_datadata()) {
