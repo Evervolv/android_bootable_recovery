@@ -127,10 +127,10 @@ try_update_binary(const char *path, ZipArchive *zip) {
     }
     bool ok = mzExtractZipEntryToFile(zip, binary_entry, fd);
     close(fd);
-    mzCloseZipArchive(zip);
 
     if (!ok) {
         LOGE("Can't copy %s\n", ASSUMED_UPDATE_BINARY_NAME);
+        mzCloseZipArchive(zip);
         return 1;
     }
 
@@ -181,6 +181,7 @@ try_update_binary(const char *path, ZipArchive *zip) {
 
     pid_t pid = fork();
     if (pid == 0) {
+        setenv("UPDATE_PACKAGE", path, 1);
         close(pipefd[0]);
         execv(binary, args);
         fprintf(stdout, "E:Can't run %s (%s)\n", binary, strerror(errno));
@@ -239,13 +240,13 @@ try_update_binary(const char *path, ZipArchive *zip) {
     waitpid(pid, &status, 0);
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         LOGE("Error in %s\n(Status %d)\n", path, WEXITSTATUS(status));
+        mzCloseZipArchive(zip);
         return INSTALL_ERROR;
     }
 
     if (firmware_type != NULL) {
+        mzCloseZipArchive(zip);
         return handle_firmware_update(firmware_type, firmware_filename, zip);
-    } else {
-        return INSTALL_SUCCESS;
     }
     return INSTALL_SUCCESS;
 }
