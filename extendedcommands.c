@@ -1578,9 +1578,7 @@ int verify_root_and_recovery() {
         }
     }
 
-    int exists = 0;
     if (0 == lstat("/system/bin/su", &st)) {
-        exists = 1;
         if (S_ISREG(st.st_mode)) {
             if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
                 ui_show_text(1);
@@ -1593,7 +1591,6 @@ int verify_root_and_recovery() {
     }
 
     if (0 == lstat("/system/xbin/su", &st)) {
-        exists = 1;
         if (S_ISREG(st.st_mode)) {
             if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
                 ui_show_text(1);
@@ -1602,16 +1599,6 @@ int verify_root_and_recovery() {
                     __system("chmod 6755 /system/xbin/su");
                 }
             }
-        }
-    }
-
-    if (!exists) {
-        ui_show_text(1);
-        ret = 1;
-        if (confirm_selection("Root access is missing. Root device?", "Yes - Root device (/system/xbin/su)")) {
-            __system("cp /sbin/su.recovery /system/xbin/su");
-            __system("chmod 6755 /system/xbin/su");
-            __system("ln -sf /system/xbin/su /system/bin/su");
         }
     }
 
