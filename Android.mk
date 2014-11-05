@@ -206,6 +206,10 @@ ifeq ($(BOARD_CACHEIMAGE_PARTITION_SIZE),)
 LOCAL_REQUIRED_MODULES += recovery-persist recovery-refresh
 endif
 
+ifneq ($(TARGET_RECOVERY_DEVICE_MODULES),)
+    LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_RECOVERY_DEVICE_MODULES)
+endif
+
 include $(BUILD_EXECUTABLE)
 
 # recovery-persist (system partition dynamic executable run after /data mounts)
