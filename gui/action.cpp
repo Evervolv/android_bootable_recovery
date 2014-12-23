@@ -52,6 +52,7 @@ extern "C" {
 #include "cutils/properties.h"
 #include "../minadbd/adb.h"
 #include "../adb_install.h"
+#include "../set_metadata.h"
 
 int TWinstall_zip(const char* path, int* wipe_cache);
 void run_script(const char *str1, const char *str2, const char *str3, const char *str4, const char *str5, const char *str6, const char *str7, int request_confirm);
@@ -461,6 +462,7 @@ int GUIAction::doAction(Action action, int isThreaded /* = 0 */)
 				gui_print("Simulating actions...\n");
 		} else if (!simulate) {
 			PartitionManager.Mount_By_Path(arg, true);
+			PartitionManager.Add_MTP_Storage(arg);
 		} else
 			gui_print("Simulating actions...\n");
 		return 0;
@@ -503,6 +505,7 @@ int GUIAction::doAction(Action action, int isThreaded /* = 0 */)
 			PartitionManager.Mount_Current_Storage(true);
 			dst = DataManager::GetCurrentStoragePath() + "/recovery.log";
 			TWFunc::copy_file("/tmp/recovery.log", dst.c_str(), 0755);
+			tw_set_default_metadata(dst.c_str());
 			sync();
 			gui_print("Copied recovery log to %s.\n", DataManager::GetCurrentStoragePath().c_str());
 		} else
@@ -1222,6 +1225,12 @@ int GUIAction::doAction(Action action, int isThreaded /* = 0 */)
 							int check = 0;
 							std::string theme_path;
 
+							if (tw_get_default_metadata(DataManager::GetSettingsStoragePath().c_str()) != 0) {
+								LOGERR("Failed to get default contexts and file mode for storage files.\n");
+							} else {
+								LOGINFO("Got default contexts and file mode for storage files.\n");
+							}
+
 							theme_path = DataManager::GetSettingsStoragePath();
 							if (PartitionManager.Mount_By_Path(theme_path.c_str(), 1) < 0) {
 								LOGERR("Unable to mount %s during reload function startup.\n", theme_path.c_str());
@@ -1260,6 +1269,7 @@ int GUIAction::doAction(Action action, int isThreaded /* = 0 */)
 				int wipe_dalvik = 0;
 
 				gui_print("Starting ADB sideload feature...\n");
+				bool mtp_was_enabled = TWFunc::Toggle_MTP(false);
 				DataManager::GetValue("tw_wipe_dalvik", wipe_dalvik);
 				ret = apply_from_adb("/");
 				DataManager::SetValue("tw_has_cancel", 0); // Remove cancel button from gui now that the zip install is going to start
@@ -1281,6 +1291,7 @@ int GUIAction::doAction(Action action, int isThreaded /* = 0 */)
 					set_usb_driver(false);
 					maybe_restart_adbd();
 				}
+				TWFunc::Toggle_MTP(mtp_was_enabled);
 				if (strcmp(file_prop, "error") != 0) {
 					struct stat st;
 					stat("/sideload/exit", &st);

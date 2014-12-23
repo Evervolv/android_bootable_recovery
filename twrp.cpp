@@ -35,6 +35,7 @@ extern "C" {
 
 extern "C" {
 #include "gui/gui.h"
+#include "set_metadata.h"
 }
 #include "twcommon.h"
 #include "twrp-functions.hpp"
@@ -274,6 +275,12 @@ int main(int argc, char **argv) {
 		if (gui_startPage("decrypt") != 0) {
 			LOGERR("Failed to start decrypt GUI page.\n");
 		}
+	} else if (datamedia) {
+		if (tw_get_default_metadata(DataManager::GetSettingsStoragePath().c_str()) != 0) {
+			LOGERR("Failed to get default contexts and file mode for storage files.\n");
+		} else {
+			LOGINFO("Got default contexts and file mode for storage files.\n");
+		}
 	}
 
 	// Read the settings file
@@ -339,10 +346,6 @@ int main(int argc, char **argv) {
 			if (gui_startPage("installsu") != 0) {
 				LOGERR("Failed to start SuperSU install page.\n");
 			}
-		} else if (TWFunc::Check_su_Perms() > 0) {
-			// su perms are set incorrectly
-			LOGINFO("Root permissions appear to be lost... fixing. (This will always happen on 4.3+ ROMs with SELinux.\n");
-			TWFunc::Fix_su_Perms();
 		}
 		sync();
 		PartitionManager.UnMount_By_Path("/system", false);

@@ -42,6 +42,7 @@
 #include "twrpDU.hpp"
 #include "fixPermissions.hpp"
 #include "infomanager.hpp"
+#include "set_metadata.h"
 extern "C" {
 	#include "mtdutils/mtdutils.h"
 	#include "mtdutils/mounts.h"
@@ -152,6 +153,7 @@ TWPartition::TWPartition() {
 	Ignore_Blkid = false;
 	Retain_Layout_Version = false;
 	Crypto_Key_Location = "footer";
+	MTP_Storage_ID = 0;
 }
 
 TWPartition::~TWPartition(void) {
@@ -1027,7 +1029,7 @@ bool TWPartition::UnMount(bool Display_Error) {
 			return true; // Never unmount system if you're not supposed to unmount it
 
 		if (Is_Storage)
-			TWFunc::Toggle_MTP(false);
+			PartitionManager.Remove_MTP_Storage(MTP_Storage_ID);
 
 		if (!Symlink_Mount_Point.empty())
 			umount(Symlink_Mount_Point.c_str());
@@ -1048,7 +1050,7 @@ bool TWPartition::UnMount(bool Display_Error) {
 }
 
 bool TWPartition::Wipe(string New_File_System) {
-	bool wiped = false, update_crypt = false, recreate_media = true, mtp_toggle = true;
+	bool wiped = false, update_crypt = false, recreate_media = true;
 	int check;
 	string Layout_Filename = Mount_Point + "/.layout_version";
 
@@ -1068,7 +1070,6 @@ bool TWPartition::Wipe(string New_File_System) {
 	if (Has_Data_Media && Current_File_System == New_File_System) {
 		wiped = Wipe_Data_Without_Wiping_Media();
 		recreate_media = false;
-		mtp_toggle = false;
 	} else {
 		DataManager::GetValue(TW_RM_RF_VAR, check);
 
@@ -1087,9 +1088,6 @@ bool TWPartition::Wipe(string New_File_System) {
 		else if (New_File_System == "f2fs")
 			wiped = Wipe_F2FS();
 		else {
-			if (Is_Storage) {
-				TWFunc::Toggle_MTP(true);
-			}
 			LOGERR("Unable to wipe '%s' -- unknown file system '%s'\n", Mount_Point.c_str(), New_File_System.c_str());
 			unlink("/.layout_version");
 			return false;
@@ -1122,8 +1120,8 @@ bool TWPartition::Wipe(string New_File_System) {
 			Recreate_Media_Folder();
 		}
 	}
-	if (Is_Storage && mtp_toggle) {
-		TWFunc::Toggle_MTP(true);
+	if (Is_Storage) {
+		PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
 	}
 	return wiped;
 }
@@ -1373,23 +1371,35 @@ bool TWPartition::Wipe_Encryption() {
 
 	Has_Data_Media = false;
 	Decrypted_Block_Device = "";
+#ifdef TW_INCLUDE_CRYPTO
+	if (Is_Decrypted) {
+		if (!UnMount(true))
+			return false;
+		if (delete_crypto_blk_dev("userdata") != 0) {
+			LOGERR("Error deleting crypto block device, continuing anyway.\n");
+		}
+	}
+#endif
 	Is_Decrypted = false;
 	Is_Encrypted = false;
 	Find_Actual_Block_Device();
-	bool mtp_was_enabled = TWFunc::Toggle_MTP(false);
 	if (Wipe(Fstab_File_System)) {
 		Has_Data_Media = Save_Data_Media;
 		if (Has_Data_Media && !Symlink_Mount_Point.empty()) {
 			Recreate_Media_Folder();
+			if (Mount(false))
+				PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
 		}
+		DataManager::SetValue(TW_IS_ENCRYPTED, 0);
 #ifndef TW_OEM_BUILD
 		gui_print("You may need to reboot recovery to be able to use /data again.\n");
 #endif
-		TWFunc::Toggle_MTP(mtp_was_enabled);
 		return true;
 	} else {
 		Has_Data_Media = Save_Data_Media;
 		LOGERR("Unable to format to remove encryption.\n");
+		if (Has_Data_Media && Mount(false))
+			PartitionManager.Add_MTP_Storage(MTP_Storage_ID);
 		return false;
 	}
 	return false;
@@ -1598,10 +1608,13 @@ bool TWPartition::Wipe_MTD() {
 }
 
 bool TWPartition::Wipe_RMRF() {
-	if (Is_Storage)
-		TWFunc::Toggle_MTP(false);
 	if (!Mount(true))
 		return false;
+	// This is the only wipe that leaves the partition mounted, so we
+	// must manually remove the partition from MTP if it is a storage
+	// partition.
+	if (Is_Storage)
+		PartitionManager.Remove_MTP_Storage(MTP_Storage_ID);
 
 	gui_print("Removing all files under '%s'\n", Mount_Point.c_str());
 	TWFunc::removeDir(Mount_Point, true);
@@ -1641,9 +1654,6 @@ bool TWPartition::Wipe_Data_Without_Wiping_Media() {
 	return Wipe_Encryption();
 #else
 	string dir;
-	#ifdef HAVE_SELINUX
-	fixPermissions perms;
-	#endif
 
 	// This handles wiping data on devices with "sdcard" in /data/media
 	if (!Mount(true))
@@ -1745,9 +1755,10 @@ bool TWPartition::Backup_DD(string backup_folder) {
 
 	Full_FileName = backup_folder + "/" + Backup_FileName;
 
-	Command = "dd if=" + Actual_Block_Device + " of='" + Full_FileName + "'" + " bs=" + DD_BS + "c count=1";
+	Command = "dd if=" + Actual_Block_Device + " of='" + Full_FileName + "'" + " bs=" + DD_BS + " count=1";
 	LOGINFO("Backup command: '%s'\n", Command.c_str());
 	TWFunc::Exec_Cmd(Command);
+	tw_set_default_metadata(Full_FileName.c_str());
 	if (TWFunc::Get_File_Size(Full_FileName) == 0) {
 		LOGERR("Backup file size for '%s' is 0 bytes.\n", Full_FileName.c_str());
 		return false;
@@ -1771,6 +1782,7 @@ bool TWPartition::Backup_Dump_Image(string backup_folder) {
 	Command = "dump_image " + MTD_Name + " '" + Full_FileName + "'";
 	LOGINFO("Backup command: '%s'\n", Command.c_str());
 	TWFunc::Exec_Cmd(Command);
+	tw_set_default_metadata(Full_FileName.c_str());
 	if (TWFunc::Get_File_Size(Full_FileName) == 0) {
 		// Actual size may not match backup size due to bad blocks on MTD devices so just check for 0 bytes
 		LOGERR("Backup file size for '%s' is 0 bytes.\n", Full_FileName.c_str());
@@ -2003,10 +2015,6 @@ void TWPartition::Find_Actual_Block_Device(void) {
 void TWPartition::Recreate_Media_Folder(void) {
 	string Command;
 
-	#ifdef HAVE_SELINUX
-	fixPermissions perms;
-	#endif
-
 	if (!Mount(true)) {
 		LOGERR("Unable to recreate /data/media folder.\n");
 	} else if (!TWFunc::Path_Exists("/data/media")) {
@@ -2014,7 +2022,13 @@ void TWPartition::Recreate_Media_Folder(void) {
 		LOGINFO("Recreating /data/media folder.\n");
 		mkdir("/data/media", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 #ifdef HAVE_SELINUX
+		// Attempt to set the correct SELinux contexts on the folder
+		fixPermissions perms;
 		perms.fixDataInternalContexts();
+		// Afterwards, we will try to set the
+		// default metadata that we were hopefully able to get during
+		// early boot.
+		tw_set_default_metadata("/data/media");
 #endif
 		// Toggle mount to ensure that "internal sdcard" gets mounted
 		PartitionManager.UnMount_By_Path(Symlink_Mount_Point, true);
@@ -2042,19 +2056,18 @@ uint64_t TWPartition::Get_Max_FileSize() {
 	const uint64_t constTB = (uint64_t) constGB * 1024;
 	const uint64_t constPB = (uint64_t) constTB * 1024;
 	const uint64_t constEB = (uint64_t) constPB * 1024;
-
-				if (Current_File_System == "ext4")
-								maxFileSize = 16 * constTB; //16 TB
-				else if (Current_File_System == "vfat")
-								maxFileSize = 4 * constGB; //4 GB
-				else if (Current_File_System == "ntfs")
-								maxFileSize = 256 * constTB; //256 TB
-				if (Current_File_System == "exfat")
-								maxFileSize = 16 * constPB; //16 PB
-				else if (Current_File_System == "ext3")
-								maxFileSize = 2 * constTB; //2 TB
-				else if (Current_File_System == "f2fs")
-							maxFileSize = 3.94 * constTB; //3.94 TB
+	if (Current_File_System == "ext4")
+		maxFileSize = 16 * constTB; //16 TB
+	else if (Current_File_System == "vfat")
+		maxFileSize = 4 * constGB; //4 GB
+	else if (Current_File_System == "ntfs")
+		maxFileSize = 256 * constTB; //256 TB
+	else if (Current_File_System == "exfat")
+		maxFileSize = 16 * constPB; //16 PB
+	else if (Current_File_System == "ext3")
+		maxFileSize = 2 * constTB; //2 TB
+	else if (Current_File_System == "f2fs")
+		maxFileSize = 3.94 * constTB; //3.94 TB
 	else
 		maxFileSize = 100000000L;
 	return maxFileSize - 1;
