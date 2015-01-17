@@ -34,8 +34,9 @@ LOCAL_SRC_FILES := \
     twrp.cpp \
     fixPermissions.cpp \
     twrpTar.cpp \
-	twrpDU.cpp \
+    twrpDU.cpp \
     twrpDigest.cpp \
+    digest/md5.c \
     find_file.cpp \
     infomanager.cpp
 
@@ -448,7 +449,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libaosprecovery
 LOCAL_MODULE_TAGS := eng optional
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/libmincrypt/includes
-LOCAL_SRC_FILES := adb_install.cpp asn1_decoder.cpp bootloader.cpp mtdutils/mtdutils.c legacy_property_service.c verifier.cpp set_metadata.c
+LOCAL_SRC_FILES := adb_install.cpp asn1_decoder.cpp bootloader.cpp legacy_property_service.c verifier.cpp set_metadata.c
 LOCAL_SHARED_LIBRARIES += libc liblog libcutils libmtdutils libfusesideload libmincrypttwrp libselinux
 
 ifneq ($(BOARD_RECOVERY_BLDRMSG_OFFSET),)

@@ -50,9 +50,7 @@ extern "C"
 #include "../twrp-functions.hpp"
 #include "../openrecoveryscript.hpp"
 #include "../orscmd/orscmd.h"
-#ifndef TW_NO_SCREEN_TIMEOUT
 #include "blanktimer.hpp"
-#endif
 
 // Enable to print render time of each frame to the log file
 //#define PRINT_RENDER_TIME 1
@@ -71,9 +69,7 @@ pthread_mutex_t gForceRendermutex;
 static int gNoAnimation = 1;
 static int gGuiInputRunning = 0;
 static int gCmdLineRunning = 0;
-#ifndef TW_NO_SCREEN_TIMEOUT
 blanktimer blankTimer;
-#endif
 
 // Needed by pages.cpp too
 int gGuiRunning = 0;
@@ -106,7 +102,7 @@ static void curtainSet()
 {
 	gr_color(0, 0, 0, 255);
 	gr_fill(0, 0, gr_fb_width(), gr_fb_height());
-	gr_blit(gCurtain, 0, 0, gr_get_width(gCurtain), gr_get_height(gCurtain), 0, 0);
+	gr_blit(gCurtain, 0, 0, gr_get_width(gCurtain), gr_get_height(gCurtain), TW_X_OFFSET, TW_Y_OFFSET);
 	gr_flip();
 }
 
@@ -178,24 +174,23 @@ void curtainClose()
 
 static void * input_thread(void *cookie)
 {
-
 	int drag = 0;
 	static int touch_and_hold = 0, dontwait = 0;
 	static int touch_repeat = 0, key_repeat = 0;
 	static int x = 0, y = 0;
-	static int lshift = 0, rshift = 0;
 	static struct timeval touchStart;
-	string seconds;
 	HardwareKeyboard *kb = PageManager::GetHardwareKeyboard();
 	MouseCursor *cursor = PageManager::GetMouseCursor();
 
 #ifndef TW_NO_SCREEN_TIMEOUT
-	//start screen timeout threads
-	blankTimer.setTimerThread();
-	DataManager::GetValue("tw_screen_timeout_secs", seconds);
-	blankTimer.setTime(atoi(seconds.c_str()));
+	{
+		string seconds;
+		DataManager::GetValue("tw_screen_timeout_secs", seconds);
+		blankTimer.setTime(atoi(seconds.c_str()));
+		blankTimer.resetTimerAndUnblank();
+	}
 #else
-	LOGINFO("Skipping screen timeout threads: TW_NO_SCREEN_TIMEOUT is set\n");
+	LOGINFO("Skipping screen timeout: TW_NO_SCREEN_TIMEOUT is set\n");
 #endif
 
 	for (;;)
@@ -225,9 +220,7 @@ static void * input_thread(void *cookie)
 				LOGERR("TOUCH_HOLD: %d,%d\n", x, y);
 #endif
 				PageManager::NotifyTouch(TOUCH_HOLD, x, y);
-#ifndef TW_NO_SCREEN_TIMEOUT
 				blankTimer.resetTimerAndUnblank();
-#endif
 			}
 			else if (touch_repeat && mtime > 100)
 			{
@@ -236,9 +229,7 @@ static void * input_thread(void *cookie)
 #endif
 				gettimeofday(&touchStart, NULL);
 				PageManager::NotifyTouch(TOUCH_REPEAT, x, y);
-#ifndef TW_NO_SCREEN_TIMEOUT
 				blankTimer.resetTimerAndUnblank();
-#endif
 			}
 			else if (key_repeat == 1 && mtime > 500)
 			{
@@ -248,9 +239,7 @@ static void * input_thread(void *cookie)
 				gettimeofday(&touchStart, NULL);
 				key_repeat = 2;
 				kb->KeyRepeat();
-#ifndef TW_NO_SCREEN_TIMEOUT
 				blankTimer.resetTimerAndUnblank();
-#endif
 
 			}
 			else if (key_repeat == 2 && mtime > 100)
@@ -260,9 +249,7 @@ static void * input_thread(void *cookie)
 #endif
 				gettimeofday(&touchStart, NULL);
 				kb->KeyRepeat();
-#ifndef TW_NO_SCREEN_TIMEOUT
 				blankTimer.resetTimerAndUnblank();
-#endif
 			}
 		}
 		else if (ev.type == EV_ABS)
@@ -279,9 +266,7 @@ static void * input_thread(void *cookie)
 					LOGERR("TOUCH_RELEASE: %d,%d\n", x, y);
 #endif
 					PageManager::NotifyTouch(TOUCH_RELEASE, x, y);
-#ifndef TW_NO_SCREEN_TIMEOUT
 					blankTimer.resetTimerAndUnblank();
-#endif
 					touch_and_hold = 0;
 					touch_repeat = 0;
 					if (!key_repeat)
@@ -306,9 +291,7 @@ static void * input_thread(void *cookie)
 						key_repeat = 0;
 						gettimeofday(&touchStart, NULL);
 					}
-#ifndef TW_NO_SCREEN_TIMEOUT
 					blankTimer.resetTimerAndUnblank();
-#endif
 				}
 				else
 				{
@@ -320,9 +303,7 @@ static void * input_thread(void *cookie)
 						if (PageManager::NotifyTouch(TOUCH_DRAG, x, y) > 0)
 							state = 1;
 						key_repeat = 0;
-#ifndef TW_NO_SCREEN_TIMEOUT
 						blankTimer.resetTimerAndUnblank();
-#endif
 					}
 				}
 			}
@@ -384,17 +365,13 @@ static void * input_thread(void *cookie)
 					touch_repeat = 0;
 					dontwait = 1;
 					gettimeofday(&touchStart, NULL);
-#ifndef TW_NO_SCREEN_TIMEOUT
 					blankTimer.resetTimerAndUnblank();
-#endif
 				} else {
 					key_repeat = 0;
 					touch_and_hold = 0;
 					touch_repeat = 0;
 					dontwait = 0;
-#ifndef TW_NO_SCREEN_TIMEOUT
 					blankTimer.resetTimerAndUnblank();
-#endif
 				}
 			} else {
 				// This is a key release
@@ -403,9 +380,7 @@ static void * input_thread(void *cookie)
 				touch_and_hold = 0;
 				touch_repeat = 0;
 				dontwait = 0;
-#ifndef TW_NO_SCREEN_TIMEOUT
 				blankTimer.resetTimerAndUnblank();
-#endif
 			}
 		}
 		else if(ev.type == EV_REL)
@@ -615,6 +590,7 @@ static int runPages(void)
 			flip();
 		}
 
+		blankTimer.checkForTimeout();
 		if (DataManager::GetIntValue("tw_gui_done") != 0)
 			break;
 	}
@@ -665,6 +641,7 @@ static int runPage(const char *page_name)
 			PageManager::Render();
 			flip();
 		}
+		blankTimer.checkForTimeout();
 		if (DataManager::GetIntValue("tw_page_done") != 0)
 		{
 			gui_changePage("main");
@@ -750,8 +727,6 @@ std::string gui_parse_text(string inText)
 
 extern "C" int gui_init(void)
 {
-	int fd;
-
 	gr_init();
 
 	if (res_create_surface("/res/images/curtain.jpg", &gCurtain))
@@ -822,6 +797,38 @@ extern "C" int gui_loadResources(void)
 	PageManager::SelectPackage("TWRP");
 
 	gGuiInitialized = 1;
+	return 0;
+
+error:
+	LOGERR("An internal error has occurred: unable to load theme.\n");
+	gGuiInitialized = 0;
+	return -1;
+}
+
+extern "C" int gui_loadCustomResources(void)
+{
+#ifndef TW_OEM_BUILD
+	if (!PartitionManager.Mount_Settings_Storage(false)) {
+		LOGERR("Unable to mount settings storage during GUI startup.\n");
+		return -1;
+	}
+
+	std::string theme_path = DataManager::GetSettingsStoragePath();
+	theme_path += "/TWRP/theme/ui.zip";
+	// Check for a custom theme
+	if (TWFunc::Path_Exists(theme_path)) {
+		// There is a custom theme, try to load it
+		if (PageManager::ReloadPackage("TWRP", theme_path)) {
+			// Custom theme failed to load, try to load stock theme
+			if (PageManager::ReloadPackage("TWRP", "/res/ui.xml")) {
+				LOGERR("Failed to load base packages.\n");
+				goto error;
+			}
+		}
+	}
+	// Set the default package
+	PageManager::SelectPackage("TWRP");
+#endif
 	return 0;
 
 error:

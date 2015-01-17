@@ -36,12 +36,6 @@ endif
 LOCAL_SHARED_LIBRARIES += libminuitwrp libc libstdc++ libminzip libaosprecovery
 LOCAL_MODULE := libguitwrp
 
-# Use this flag to create a build that simulates threaded actions like installing zips, backups, restores, and wipes for theme testing
-#TWRP_SIMULATE_ACTIONS := true
-ifeq ($(TWRP_SIMULATE_ACTIONS), true)
-LOCAL_CFLAGS += -D_SIMULATE_ACTIONS
-endif
-
 #TWRP_EVENT_LOGGING := true
 ifeq ($(TWRP_EVENT_LOGGING), true)
 LOCAL_CFLAGS += -D_EVENT_LOGGING
@@ -62,23 +56,29 @@ endif
 ifeq ($(TW_DISABLE_TTF), true)
     LOCAL_CFLAGS += -DTW_DISABLE_TTF
 endif
+ifneq ($(TW_X_OFFSET),)
+  LOCAL_CFLAGS += -DTW_X_OFFSET=$(TW_X_OFFSET)
+endif
+ifneq ($(TW_Y_OFFSET),)
+  LOCAL_CFLAGS += -DTW_Y_OFFSET=$(TW_Y_OFFSET)
+endif
 
 ifeq ($(DEVICE_RESOLUTION),)
-$(warning ********************************************************************************)
-$(warning * DEVICE_RESOLUTION is NOT SET in BoardConfig.mk )
-$(warning * Please see http://tinyw.in/nP7d for details    )
-$(warning ********************************************************************************)
-$(error stopping)
+  $(warning ********************************************************************************)
+  $(warning * DEVICE_RESOLUTION is NOT SET in BoardConfig.mk )
+  $(warning * Please see http://tinyw.in/50tg for details.   )
+  $(warning ********************************************************************************)
+  $(error stopping)
 endif
 
 ifeq ($(TW_CUSTOM_THEME),)
-	ifeq "$(wildcard $(commands_recovery_local_path)/gui/devices/$(DEVICE_RESOLUTION))" ""
-	$(warning ********************************************************************************)
-	$(warning * DEVICE_RESOLUTION ($(DEVICE_RESOLUTION)) does NOT EXIST in $(commands_recovery_local_path)/gui/devices )
-	$(warning * Please choose an existing theme or create a new one for your device )
-	$(warning ********************************************************************************)
-	$(error stopping)
-	endif
+  ifeq "$(wildcard $(commands_recovery_local_path)/gui/devices/$(DEVICE_RESOLUTION))" ""
+    $(warning ********************************************************************************)
+    $(warning * DEVICE_RESOLUTION ($(DEVICE_RESOLUTION)) does NOT EXIST in $(commands_recovery_local_path)/gui/devices )
+    $(warning * Please choose an existing theme or create a new one for your device. )
+    $(warning ********************************************************************************)
+    $(error stopping)
+  endif
 endif
 
 LOCAL_C_INCLUDES += bionic external/stlport/stlport $(commands_recovery_local_path)/gui/devices/$(DEVICE_RESOLUTION)
