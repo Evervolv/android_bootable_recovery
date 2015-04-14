@@ -44,14 +44,12 @@
 #include "variables.h"
 #include "bootloader.h"
 #include "cutils/properties.h"
-#ifdef ANDROID_RB_POWEROFF
-	#include "cutils/android_reboot.h"
-#endif
+#include "cutils/android_reboot.h"
+#include <sys/reboot.h>
 #endif // ndef BUILD_TWRPTAR_MAIN
 #ifndef TW_EXCLUDE_ENCRYPTED_BACKUPS
 	#include "openaes/inc/oaes_lib.h"
 #endif
-#include "cutils/android_reboot.h"
 
 extern "C" {
 	#include "libcrecovery/common.h"
@@ -126,20 +124,20 @@ int TWFunc::Wait_For_Child(pid_t pid, int *status, string Child_Name) {
 
 	rc_pid = waitpid(pid, status, 0);
 	if (rc_pid > 0) {
-		if (WEXITSTATUS(*status) == 0)
-			LOGINFO("%s process ended with RC=%d\n", Child_Name.c_str(), WEXITSTATUS(*status)); // Success
-		else if (WIFSIGNALED(*status)) {
-			LOGINFO("%s process ended with signal: %d\n", Child_Name.c_str(), WTERMSIG(*status)); // Seg fault or some other non-graceful termination
+		if (WIFSIGNALED(*status)) {
+			LOGERR("%s process ended with signal: %d\n", Child_Name.c_str(), WTERMSIG(*status)); // Seg fault or some other non-graceful termination
 			return -1;
-		} else if (WEXITSTATUS(*status) != 0) {
-			LOGINFO("%s process ended with ERROR=%d\n", Child_Name.c_str(), WEXITSTATUS(*status)); // Graceful exit, but there was an error
+		} else if (WEXITSTATUS(*status) == 0) {
+			LOGINFO("%s process ended with RC=%d\n", Child_Name.c_str(), WEXITSTATUS(*status)); // Success
+		} else {
+			LOGERR("%s process ended with ERROR=%d\n", Child_Name.c_str(), WEXITSTATUS(*status)); // Graceful exit, but there was an error
 			return -1;
 		}
 	} else { // no PID returned
 		if (errno == ECHILD)
-			LOGINFO("%s no child process exist\n", Child_Name.c_str());
+			LOGERR("%s no child process exist\n", Child_Name.c_str());
 		else {
-			LOGINFO("%s Unexpected error\n", Child_Name.c_str());
+			LOGERR("%s Unexpected error %d\n", Child_Name.c_str(), errno);
 			return -1;
 		}
 	}
@@ -520,48 +518,51 @@ int TWFunc::tw_reboot(RebootCommand command)
 {
 	// Always force a sync before we reboot
 	sync();
+	Update_Log_File();
 
 	switch (command) {
 		case rb_current:
 		case rb_system:
-			Update_Log_File();
 			Update_Intent_File("s");
 			sync();
 			check_and_run_script("/sbin/rebootsystem.sh", "reboot system");
+#ifdef ANDROID_RB_PROPERTY
+			return property_set(ANDROID_RB_PROPERTY, "reboot,");
+#elif defined(ANDROID_RB_RESTART)
+			return android_reboot(ANDROID_RB_RESTART, 0, 0);
+#else
 			return reboot(RB_AUTOBOOT);
+#endif
 		case rb_recovery:
 			check_and_run_script("/sbin/rebootrecovery.sh", "reboot recovery");
 #ifdef ANDROID_RB_PROPERTY
-			property_set(ANDROID_RB_PROPERTY, "reboot,recovery");
+			return property_set(ANDROID_RB_PROPERTY, "reboot,recovery");
 #else
 			return __reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, LINUX_REBOOT_CMD_RESTART2, (void*) "recovery");
 #endif
-			sleep(5);
-			return 0;
 		case rb_bootloader:
 			check_and_run_script("/sbin/rebootbootloader.sh", "reboot bootloader");
 #ifdef ANDROID_RB_PROPERTY
-			property_set(ANDROID_RB_PROPERTY, "reboot,bootloader");
+			return property_set(ANDROID_RB_PROPERTY, "reboot,bootloader");
 #else
 			return __reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, LINUX_REBOOT_CMD_RESTART2, (void*) "bootloader");
 #endif
-			sleep(5);
-			return 0;
 		case rb_poweroff:
 			check_and_run_script("/sbin/poweroff.sh", "power off");
-#ifdef ANDROID_RB_POWEROFF
-			android_reboot(ANDROID_RB_POWEROFF, 0, 0);
-#endif
+#ifdef ANDROID_RB_PROPERTY
+			return property_set(ANDROID_RB_PROPERTY, "shutdown,");
+#elif defined(ANDROID_RB_POWEROFF)
+			return android_reboot(ANDROID_RB_POWEROFF, 0, 0);
+#else
 			return reboot(RB_POWER_OFF);
+#endif
 		case rb_download:
 			check_and_run_script("/sbin/rebootdownload.sh", "reboot download");
 #ifdef ANDROID_RB_PROPERTY
-			property_set(ANDROID_RB_PROPERTY, "reboot,download");
+			return property_set(ANDROID_RB_PROPERTY, "reboot,download");
 #else
 			return __reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, LINUX_REBOOT_CMD_RESTART2, (void*) "download");
 #endif
-			sleep(5);
-			return 0;
 		default:
 			return -1;
 	}
