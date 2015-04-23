@@ -716,7 +716,6 @@ wipe_data(int confirm, Device* device) {
     device->WipeData();
     erase_volume("/data");
     erase_volume("/cache");
-    erase_persistent_partition();
     ui->Print("Data wipe complete.\n");
 }
 
@@ -1107,6 +1106,7 @@ main(int argc, char **argv) {
         }
         if (status != INSTALL_SUCCESS) {
             ui->Print("Installation aborted.\n");
+            ui->Print("OTA failed! Please power off the device to keep it in this state and file a bug report!\n");
 
             // If this is an eng or userdebug build, then automatically
             // turn the text display on if the script fails so the error
@@ -1121,7 +1121,6 @@ main(int argc, char **argv) {
         if (device->WipeData()) status = INSTALL_ERROR;
         if (erase_volume("/data")) status = INSTALL_ERROR;
         if (wipe_cache && erase_volume("/cache")) status = INSTALL_ERROR;
-        if (erase_persistent_partition() == -1 ) status = INSTALL_ERROR;
         if (status != INSTALL_SUCCESS) ui->Print("Data wipe failed.\n");
     } else if (wipe_cache) {
         if (wipe_cache && erase_volume("/cache")) status = INSTALL_ERROR;
