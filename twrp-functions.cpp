@@ -64,10 +64,7 @@ int TWFunc::Exec_Cmd(const string& cmd, string &result) {
 	exec = __popen(cmd.c_str(), "r");
 	if (!exec) return -1;
 	while(!feof(exec)) {
-		memset(&buffer, 0, sizeof(buffer));
 		if (fgets(buffer, 128, exec) != NULL) {
-			buffer[128] = '\n';
-			buffer[129] = 0;
 			result += buffer;
 		}
 	}
@@ -487,15 +484,8 @@ void TWFunc::Update_Log_File(void) {
 	if (Part != NULL) {
 		struct bootloader_message boot;
 		memset(&boot, 0, sizeof(boot));
-		if (Part->Current_File_System == "mtd") {
-			if (set_bootloader_message_mtd_name(&boot, Part->MTD_Name.c_str()) != 0)
-				LOGERR("Unable to set MTD bootloader message.\n");
-		} else if (Part->Current_File_System == "emmc") {
-			if (set_bootloader_message_block_name(&boot, Part->Actual_Block_Device.c_str()) != 0)
-				LOGERR("Unable to set emmc bootloader message.\n");
-		} else {
-			LOGERR("Unknown file system for /misc: '%s'\n", Part->Current_File_System.c_str());
-		}
+		if (set_bootloader_message(&boot) != 0)
+			LOGERR("Unable to set bootloader message.\n");
 	}
 
 	if (PartitionManager.Mount_By_Path("/cache", true)) {

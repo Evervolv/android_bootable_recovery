@@ -519,10 +519,7 @@ bool TWPartitionManager::Make_MD5(bool generate_md5, string Backup_Folder, strin
 
 bool TWPartitionManager::Backup_Partition(TWPartition* Part, string Backup_Folder, bool generate_md5, unsigned long long* img_bytes_remaining, unsigned long long* file_bytes_remaining, unsigned long *img_time, unsigned long *file_time, unsigned long long *img_bytes, unsigned long long *file_bytes) {
 	time_t start, stop;
-	int img_bps;
-	unsigned long long file_bps;
-	unsigned long total_time, remain_time, section_time;
-	int use_compression, backup_time;
+	int use_compression;
 	float pos;
 	unsigned long long total_size, current_size;
 
@@ -531,35 +528,13 @@ bool TWPartitionManager::Backup_Partition(TWPartition* Part, string Backup_Folde
 	if (Part == NULL)
 		return true;
 
-	DataManager::GetValue(TW_BACKUP_AVG_IMG_RATE, img_bps);
-
 	DataManager::GetValue(TW_USE_COMPRESSION_VAR, use_compression);
-	if (use_compression)
-		DataManager::GetValue(TW_BACKUP_AVG_FILE_COMP_RATE, file_bps);
-	else
-		DataManager::GetValue(TW_BACKUP_AVG_FILE_RATE, file_bps);
 
-	// We know the speed for both, how far into the whole backup are we, based on time
-	total_time = (*img_bytes / (unsigned long)img_bps) + (*file_bytes / (unsigned long)file_bps);
-	remain_time = (*img_bytes_remaining / (unsigned long)img_bps) + (*file_bytes_remaining / (unsigned long)file_bps);
-
-	//pos = (total_time - remain_time) / (float) total_time;
 	total_size = *file_bytes + *img_bytes;
 	current_size = *file_bytes + *img_bytes - *file_bytes_remaining - *img_bytes_remaining;
+	// Set the position
 	pos = ((float)(current_size) / (float)(total_size));
 	DataManager::SetProgress(pos);
-
-	LOGINFO("Estimated total time: %lu\nEstimated remaining time: %lu\n", total_time, remain_time);
-
-	// And get the time
-	if (Part->Backup_Method == 1)
-		section_time = Part->Backup_Size / file_bps;
-	else
-		section_time = Part->Backup_Size / img_bps;
-
-	// Set the position
-	pos = section_time / (float) total_time;
-	//DataManager::ShowProgress(pos, section_time);
 
 	TWFunc::SetPerformanceMode(true);
 	time(&start);
@@ -599,7 +574,7 @@ bool TWPartitionManager::Backup_Partition(TWPartition* Part, string Backup_Folde
 			}
 		}
 		time(&stop);
-		backup_time = (int) difftime(stop, start);
+		int backup_time = (int) difftime(stop, start);
 		LOGINFO("Partition Backup time: %d\n", backup_time);
 		if (Part->Backup_Method == 1) {
 			*file_bytes_remaining -= Part->Backup_Size;
@@ -905,9 +880,13 @@ int TWPartitionManager::Run_Restore(string Restore_Name) {
 			restore_path = Restore_List.substr(start_pos, end_pos - start_pos);
 			restore_part = Find_Partition_By_Path(restore_path);
 			if (restore_part != NULL) {
-				partition_count++;
+				if (restore_part->Mount_Read_Only) {
+					LOGERR("Cannot restore %s -- mounted read only.\n", restore_part->Backup_Display_Name.c_str());
+					return false;
+				}
 				if (check_md5 > 0 && !restore_part->Check_MD5(Restore_Name))
 					return false;
+				partition_count++;
 				total_restore_size += restore_part->Get_Restore_Size(Restore_Name);
 				if (restore_part->Has_SubPartition) {
 					std::vector<TWPartition*>::iterator subpart;
@@ -1233,16 +1212,7 @@ int TWPartitionManager::Wipe_Media_From_Data(void) {
 		gui_print("Wiping internal storage -- /data/media...\n");
 		Remove_MTP_Storage(dat->MTP_Storage_ID);
 		TWFunc::removeDir("/data/media", false);
-		if (mkdir("/data/media", S_IRWXU | S_IRWXG | S_IWGRP | S_IXGRP) != 0) {
-			Add_MTP_Storage(dat->MTP_Storage_ID);
-			return false;
-		}
-		if (dat->Has_Data_Media) {
-			dat->Recreate_Media_Folder();
-			// Unmount and remount - slightly hackish way to ensure that the "/sdcard" folder is still mounted properly after wiping
-			dat->UnMount(false);
-			dat->Mount(false);
-		}
+		dat->Recreate_Media_Folder();
 		Add_MTP_Storage(dat->MTP_Storage_ID);
 		return true;
 	} else {
@@ -1276,6 +1246,34 @@ int TWPartitionManager::Repair_By_Path(string Path, bool Display_Error) {
 		LOGERR("Repair: Unable to find partition for path '%s'\n", Local_Path.c_str());
 	} else {
 		LOGINFO("Repair: Unable to find partition for path '%s'\n", Local_Path.c_str());
+	}
+	return false;
+}
+
+int TWPartitionManager::Resize_By_Path(string Path, bool Display_Error) {
+	std::vector<TWPartition*>::iterator iter;
+	int ret = false;
+	bool found = false;
+	string Local_Path = TWFunc::Get_Root_Path(Path);
+
+	if (Local_Path == "/tmp" || Local_Path == "/")
+		return true;
+
+	// Iterate through all partitions
+	for (iter = Partitions.begin(); iter != Partitions.end(); iter++) {
+		if ((*iter)->Mount_Point == Local_Path || (!(*iter)->Symlink_Mount_Point.empty() && (*iter)->Symlink_Mount_Point == Local_Path)) {
+			ret = (*iter)->Resize();
+			found = true;
+		} else if ((*iter)->Is_SubPartition && (*iter)->SubPartition_Of == Local_Path) {
+			(*iter)->Resize();
+		}
+	}
+	if (found) {
+		return ret;
+	} else if (Display_Error) {
+		LOGERR("Resize: Unable to find partition for path '%s'\n", Local_Path.c_str());
+	} else {
+		LOGINFO("Resize: Unable to find partition for path '%s'\n", Local_Path.c_str());
 	}
 	return false;
 }
