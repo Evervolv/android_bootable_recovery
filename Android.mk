@@ -308,6 +308,9 @@ endif
 ifneq ($(wildcard bionic/libc/include/sys/capability.h),)
     LOCAL_CFLAGS += -DHAVE_CAPABILITIES
 endif
+ifneq ($(TARGET_RECOVERY_INITRC),)
+    TW_EXCLUDE_DEFAULT_USB_INIT := true
+endif
 
 LOCAL_ADDITIONAL_DEPENDENCIES := \
     dump_image \
@@ -370,12 +373,21 @@ endif
 ifeq ($(TW_INCLUDE_INJECTTWRP), true)
     LOCAL_ADDITIONAL_DEPENDENCIES += injecttwrp
 endif
+ifneq ($(TW_EXCLUDE_DEFAULT_USB_INIT), true)
+    LOCAL_ADDITIONAL_DEPENDENCIES += init.recovery.usb.rc
+endif
 # Allow devices to specify device-specific recovery dependencies
 ifneq ($(TARGET_RECOVERY_DEVICE_MODULES),)
     LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_RECOVERY_DEVICE_MODULES)
 endif
 LOCAL_CFLAGS += -DTWRES=\"$(TWRES_PATH)\"
 LOCAL_CFLAGS += -DTWHTCD_PATH=\"$(TWHTCD_PATH)\"
+ifeq ($(TW_INCLUDE_NTFS_3G),true)
+    LOCAL_ADDITIONAL_DEPENDENCIES += \
+        ntfs-3g \
+        ntfsfix \
+        mkntfs
+endif
 
 include $(BUILD_EXECUTABLE)
 
@@ -503,7 +515,8 @@ include $(commands_recovery_local_path)/injecttwrp/Android.mk \
     $(commands_recovery_local_path)/twrpTarMain/Android.mk \
     $(commands_recovery_local_path)/mtp/Android.mk \
     $(commands_recovery_local_path)/minzip/Android.mk \
-    $(commands_recovery_local_path)/dosfstools/Android.mk
+    $(commands_recovery_local_path)/dosfstools/Android.mk \
+    $(commands_recovery_local_path)/etc/Android.mk
 
 ifeq ($(TW_INCLUDE_CRYPTO), true)
     include $(commands_recovery_local_path)/crypto/lollipop/Android.mk
