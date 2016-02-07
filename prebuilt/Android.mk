@@ -174,7 +174,7 @@ ifneq ($(TW_EXCLUDE_ENCRYPTED_BACKUPS), true)
     RELINK_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libopenaes.so
 endif
 ifeq ($(TARGET_USERIMAGES_USE_F2FS), true)
-    ifeq ($(shell test $(CM_PLATFORM_SDK_VERSION) -ge 4; echo $$?),0)
+    ifneq (EV_BUILD,)
         RELINK_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/mkfs.f2fs
         RELINK_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libf2fs.so
     else ifneq (,$(filter $(PLATFORM_SDK_VERSION), 23))
@@ -199,7 +199,7 @@ ifneq ($(wildcard external/pcre/Android.mk),)
     RELINK_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libpcre.so
 endif
 ifeq ($(TW_INCLUDE_NTFS_3G),true)
-ifeq ($(shell test $(CM_PLATFORM_SDK_VERSION) -ge 4; echo $$?),0)
+ifneq (EV_BUILD,)
     RELINK_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/mount.ntfs
     RELINK_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/fsck.ntfs
     RELINK_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/mkfs.ntfs
