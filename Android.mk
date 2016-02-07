@@ -469,6 +469,11 @@ ifeq ($(shell test $(PLATFORM_SDK_VERSION) -gt 22; echo $$?),0)
         mount.ntfs \
         fsck.ntfs \
         mkfs.ntfs
+else ifneq (EV_BUILD,)
+    LOCAL_ADDITIONAL_DEPENDENCIES += \
+        mount.ntfs \
+        fsck.ntfs \
+        mkfs.ntfs
 else
     LOCAL_ADDITIONAL_DEPENDENCIES += \
         ntfs-3g \
@@ -478,6 +483,10 @@ endif
 endif
 ifeq ($(TARGET_USERIMAGES_USE_F2FS), true)
 ifeq ($(shell test $(CM_PLATFORM_SDK_VERSION) -ge 3; echo $$?),0)
+    LOCAL_ADDITIONAL_DEPENDENCIES += \
+        fsck.f2fs \
+        mkfs.f2fs
+else ifneq (EV_BUILD,)
     LOCAL_ADDITIONAL_DEPENDENCIES += \
         fsck.f2fs \
         mkfs.f2fs
