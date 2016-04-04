@@ -33,7 +33,7 @@ LOCAL_CLANG := true
 
 LOCAL_SRC_FILES := $(updater_src_files)
 
-LOCAL_STATIC_LIBRARIES += libfec libfec_rs libsquashfs_utils libcrypto_static
+LOCAL_STATIC_LIBRARIES += libfec libfec_rs libsquashfs_utils libcrypto_utils_static libcrypto_static
 
 ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
 LOCAL_CFLAGS += -DUSE_EXT4
