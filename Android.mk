@@ -596,6 +596,7 @@ LOCAL_SRC_FILES := \
     asn1_decoder.cpp \
     verifier.cpp \
     ui.cpp
+LOCAL_C_INCLUDES := system/core/fs_mgr/include
 LOCAL_STATIC_LIBRARIES := libcrypto
 include $(BUILD_STATIC_LIBRARY)
 
