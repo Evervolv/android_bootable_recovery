@@ -2,6 +2,7 @@ ifneq ($(TARGET_SIMULATOR),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := \
     src/boot.c \
     src/check.c \
@@ -22,6 +23,7 @@ LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := \
     src/boot.c \
     src/check.c \
@@ -42,6 +44,7 @@ LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := src/mkfs.fat.c
 
 LOCAL_SHARED_LIBRARIES := libc

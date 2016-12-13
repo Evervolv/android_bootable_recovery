@@ -3,6 +3,7 @@ LOCAL_PATH := $(call my-dir)
 ifneq ($(TARGET_SIMULATOR),true)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := flashutils.c
 LOCAL_MODULE := libflashutils
 LOCAL_MODULE_TAGS := optional
@@ -20,6 +21,7 @@ $(foreach board_define,$(BOARD_RECOVERY_DEFINES), \
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := flash_image.c
 LOCAL_MODULE := libflash_image
 LOCAL_MODULE_TAGS := optional
@@ -27,6 +29,7 @@ LOCAL_CFLAGS += -Dmain=flash_image_main
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := dump_image.c
 LOCAL_MODULE := libdump_image
 LOCAL_MODULE_TAGS := optional
@@ -34,6 +37,7 @@ LOCAL_CFLAGS += -Dmain=dump_image_main
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := erase_image.c
 LOCAL_MODULE := liberase_image
 LOCAL_MODULE_TAGS := optional
@@ -41,6 +45,7 @@ LOCAL_CFLAGS += -Dmain=erase_image_main
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := dump_image.c
 LOCAL_MODULE := utility_dump_image
 LOCAL_MODULE_TAGS := optional
@@ -53,6 +58,7 @@ LOCAL_FORCE_STATIC_EXECUTABLE := true
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := flash_image.c
 LOCAL_MODULE := utility_flash_image
 LOCAL_MODULE_TAGS := optional
@@ -65,6 +71,7 @@ LOCAL_FORCE_STATIC_EXECUTABLE := true
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := erase_image.c
 LOCAL_MODULE := utility_erase_image
 LOCAL_MODULE_TAGS := optional
@@ -79,6 +86,7 @@ include $(BUILD_EXECUTABLE)
 #Added for dynamic building for TWRP:
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES := flashutils.c
 LOCAL_MODULE := libflashutils
 LOCAL_MODULE_TAGS := eng
@@ -96,6 +104,7 @@ $(foreach board_define,$(BOARD_RECOVERY_DEFINES), \
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_MODULE := flash_image
 LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
@@ -105,6 +114,7 @@ LOCAL_SHARED_LIBRARIES := libmtdutils libflashutils libmmcutils libbmlutils libc
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_MODULE := dump_image
 LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
@@ -114,6 +124,7 @@ LOCAL_SHARED_LIBRARIES := libmtdutils libflashutils libmmcutils libbmlutils libc
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_MODULE := erase_image
 LOCAL_MODULE_TAGS := eng
 LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES

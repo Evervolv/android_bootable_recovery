@@ -9,6 +9,7 @@ endif
 
 LOCAL_SRC_FILES:= \
 	orscmd.cpp
+
 LOCAL_CFLAGS += -c -W
 LOCAL_MODULE := orscmd
 LOCAL_MODULE_STEM := twrp

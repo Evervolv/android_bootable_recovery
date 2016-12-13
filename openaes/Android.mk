@@ -2,6 +2,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 ifneq ($(TW_EXCLUDE_ENCRYPTED_BACKUPS), true)
+	LOCAL_PACK_MODULE_RELOCATIONS := false
 	# Build shared binary
 	LOCAL_SRC_FILES:= src/oaes.c
 	LOCAL_C_INCLUDES := \
@@ -17,6 +18,7 @@ ifneq ($(TW_EXCLUDE_ENCRYPTED_BACKUPS), true)
 
 	# Build shared library
 	include $(CLEAR_VARS)
+	LOCAL_PACK_MODULE_RELOCATIONS := false
 	LOCAL_MODULE := libopenaes
 	LOCAL_MODULE_TAGS := eng
 	LOCAL_C_INCLUDES := \
@@ -28,6 +30,7 @@ ifneq ($(TW_EXCLUDE_ENCRYPTED_BACKUPS), true)
 
 	# Build static library
 	include $(CLEAR_VARS)
+	LOCAL_PACK_MODULE_RELOCATIONS := false
 	LOCAL_MODULE := libopenaes_static
 	LOCAL_MODULE_TAGS := eng
 	LOCAL_C_INCLUDES := \

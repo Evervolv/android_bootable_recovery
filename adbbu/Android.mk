@@ -1,6 +1,6 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
-
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_SRC_FILES:= \
 	twrpback.cpp \
 	../twrpDigest.cpp \
@@ -23,6 +23,7 @@ LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_MODULE := libtwadbbu
 LOCAL_MODULE_TAGS := optional
 LOCAL_CFLAGS = -D_FILE_OFFSET_BITS=64 -fno-strict-aliasing
