@@ -14,6 +14,12 @@
 
 LOCAL_PATH := $(call my-dir)
 
+# This needs arm pie, override device calls
+# until a solution is found.
+ifeq ($(TARGET_DISABLE_ARM_PIE),true)
+LOCAL_LDFLAGS += -pie
+endif
+
 ifdef project-path-for
     ifeq ($(LOCAL_PATH),$(call project-path-for,recovery))
         PROJECT_PATH_AGREES := true
