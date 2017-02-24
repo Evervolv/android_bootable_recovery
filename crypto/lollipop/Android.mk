@@ -10,11 +10,7 @@ LOCAL_SHARED_LIBRARIES := libcrypto libhardware libcutils
 LOCAL_C_INCLUDES := external/openssl/include $(commands_recovery_local_path)/crypto/scrypt/lib/crypto
 
 ifeq ($(TARGET_HW_DISK_ENCRYPTION),true)
-    ifeq ($(TARGET_CRYPTFS_HW_PATH),)
-        LOCAL_C_INCLUDES += device/qcom/common/cryptfs_hw
-    else
-        LOCAL_C_INCLUDES += $(TARGET_CRYPTFS_HW_PATH)
-    endif
+    LOCAL_C_INCLUDES += $(TARGET_CRYPTFS_HW_PATH)
     LOCAL_SHARED_LIBRARIES += libcryptfs_hw
     LOCAL_CFLAGS += -DCONFIG_HW_DISK_ENCRYPTION
 endif
@@ -40,11 +36,7 @@ LOCAL_SHARED_LIBRARIES := libcrypto libhardware libcutils libc
 LOCAL_C_INCLUDES := external/openssl/include $(commands_recovery_local_path)/crypto/scrypt/lib/crypto
 
 ifeq ($(TARGET_HW_DISK_ENCRYPTION),true)
-    ifeq ($(TARGET_CRYPTFS_HW_PATH),)
-        LOCAL_C_INCLUDES += device/qcom/common/cryptfs_hw
-    else
-        LOCAL_C_INCLUDES += $(TARGET_CRYPTFS_HW_PATH)
-    endif
+    LOCAL_C_INCLUDES += $(TARGET_CRYPTFS_HW_PATH)
     LOCAL_SHARED_LIBRARIES += libcryptfs_hw
     LOCAL_CFLAGS += -DCONFIG_HW_DISK_ENCRYPTION
 endif
