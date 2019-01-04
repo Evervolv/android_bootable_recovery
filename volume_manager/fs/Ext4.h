@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
+ * Copyright (C) 2019 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +15,23 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef VOLMGR_EXT4_H
+#define VOLMGR_EXT4_H
 
-#include "recovery_ui/device.h"
-#include "recovery_ui/ui.h"
-#include <volume_manager/VolumeManager.h>
+#include <utils/Errors.h>
 
-using android::volmgr::VolumeInfo;
+#include <string>
 
-int ApplyFromStorage(Device* device, VolumeInfo& vi, RecoveryUI* ui);
+namespace android {
+namespace volmgr {
+namespace ext4 {
+
+status_t Mount(const std::string& source, const std::string& target, bool ro, bool remount,
+               bool executable, const std::string& opts = "", bool trusted = false,
+               bool portable = false);
+
+}  // namespace ext4
+}  // namespace volmgr
+}  // namespace android
+
+#endif
