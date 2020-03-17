@@ -187,6 +187,15 @@ bool ask_to_continue_unverified(Device* device) {
   }
 }
 
+bool ask_to_continue_downgrade(Device* device) {
+  if (get_build_type() == "user") {
+    return false;
+  } else {
+    ui->SetProgressType(RecoveryUI::EMPTY);
+    return yes_no(device, "This package will downgrade your system", "Install anyway?");
+  }
+}
+
 static bool ask_to_wipe_data(Device* device) {
   std::vector<std::string> headers{ "Wipe all user data?", "  THIS CAN NOT BE UNDONE!" };
   std::vector<std::string> items{ " Cancel", " Factory data reset" };
@@ -931,7 +940,7 @@ Device::BuiltinAction start_recovery(Device* device, const std::vector<std::stri
                      std::bind(&RecoveryUI::SetProgress, ui, std::placeholders::_1));
                  memory_package != nullptr) {
         status = install_package(update_package, should_wipe_cache, true, retry_count,
-                                 true /* verify */, ui);
+                                 true /* verify */, false /* allow_ab_downgrade */, ui);
       } else {
         // We may fail to memory map the package on 32 bit builds for packages with 2GiB+ size.
         // In such cases, we will try to install the package with fuse. This is not the default
