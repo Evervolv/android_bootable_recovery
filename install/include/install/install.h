@@ -25,6 +25,7 @@
 #include <ziparchive/zip_archive.h>
 
 #include "package.h"
+#include "recovery_ui/device.h"
 #include "recovery_ui/ui.h"
 
 enum InstallResult {
@@ -65,6 +66,9 @@ std::vector<std::string> GetWipePartitionList(Package* wipe_package);
 // Verifies the compatibility info in a Treble-compatible package. Returns true directly if the
 // entry doesn't exist.
 bool verify_package_compatibility(ZipArchiveHandle package_zip);
+
+// Defined in recovery.cpp, just declare it and it will eventually link fine.
+bool ask_to_continue_unverified(Device* device);
 
 // Checks if the the metadata in the OTA package has expected values. Returns 0 on success.
 // Mandatory checks: ota-type, pre-device and serial number(if presents)
