@@ -25,6 +25,7 @@
 #include <cutils/fs.h>
 #include <private/android_filesystem_config.h>
 
+#include <iostream>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/mount.h>
@@ -70,11 +71,13 @@ status_t EmulatedVolume::doMount() {
 
     if (::mount(mDevPath.c_str(), kStagingPath.c_str(), mFsType.c_str(), mFlags,
                 mFsOptions.c_str()) != 0) {
-        PLOG(ERROR) << getId() << " failed to mount " << mDevPath << " on " << kStagingPath;
+        // It's ok to fail mounting if we're encrytped, so avoid printing to recovery's UiLogger
+        std::cout << getId() << " failed to mount " << mDevPath << " on " << kStagingPath
+                  << ": " << std::strerror(errno);
         return -EIO;
     }
     if (BindMount(bindPath, getPath()) != OK) {
-        PLOG(ERROR) << getId() << " failed to bind mount " << bindPath << " on " << getPath();
+        PLOG(WARNING) << getId() << " failed to bind mount " << bindPath << " on " << getPath();
         ForceUnmount(kStagingPath);
         return -EIO;
     }
