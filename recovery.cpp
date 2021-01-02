@@ -74,6 +74,8 @@ using android::sp;
 using android::volmgr::VolumeManager;
 using android::volmgr::VolumeInfo;
 
+using android::fs_mgr::Fstab;
+
 static constexpr const char* COMMAND_FILE = "/cache/recovery/command";
 static constexpr const char* LAST_KMSG_FILE = "/cache/recovery/last_kmsg";
 static constexpr const char* LAST_LOG_FILE = "/cache/recovery/last_log";
@@ -202,6 +204,28 @@ bool ask_to_continue_downgrade(Device* device) {
     device->GetUI()->SetProgressType(RecoveryUI::EMPTY);
     return yes_no(device, "This package will downgrade your system", "Install anyway?");
   }
+}
+
+std::string get_preferred_fs(Device* device) {
+  Fstab fstab;
+  auto read_fstab = ReadFstabFromFile("/etc/fstab", &fstab);
+  std::vector<std::string> headers{ "Choose what filesystem you want to use on /data", "Entries here are supported by your device." };
+  std::string fs = volume_for_mount_point("/data")->fs_type;
+  if (read_fstab) {
+      std::string current_filesystem = android::fs_mgr::GetEntryForPath(&fstab, "/data")->fs_type;
+      headers.emplace_back("Current filesystem: " + current_filesystem);
+  }
+  std::vector<std::string> items = get_data_fs_items();
+
+  if (items.size() > 1) {
+      size_t chosen_item = device->GetUI()->ShowMenu(
+          headers, items, 0, true,
+          std::bind(&Device::HandleMenuKey, device, std::placeholders::_1, std::placeholders::_2));
+      if (chosen_item == Device::kGoBack)
+        return "";
+      fs = items[chosen_item];
+  }
+  return fs;
 }
 
 std::string get_chosen_slot(Device* device) {
@@ -561,8 +585,11 @@ change_menu:
       case Device::WIPE_DATA:
         save_current_log = true;
         if (ui->IsTextVisible()) {
+          auto fs = get_preferred_fs(device);
+          if (fs == "")
+            break;
           if (ask_to_wipe_data(device)) {
-            WipeData(device);
+            WipeData(device, fs);
           }
         } else {
           WipeData(device);
