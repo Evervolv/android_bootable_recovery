@@ -477,6 +477,8 @@ int main(int argc, char** argv) {
     // because ROMs are flashed to the inactive slot. Removing the menu option
     // prevents users from accidentally trashing a functioning ROM.
     device->RemoveMenuItemForAction(Device::WIPE_SYSTEM);
+  } else {
+    device->RemoveMenuItemForAction(Device::SWAP_SLOT);
   }
 
   if (!android::base::GetBoolProperty("ro.boot.dynamic_partitions", false) &&
