@@ -74,7 +74,7 @@ static_assert(kRecoveryApiVersion == RECOVERY_API_VERSION, "Mismatching recovery
 static constexpr int VERIFICATION_PROGRESS_TIME = 60;
 static constexpr float VERIFICATION_PROGRESS_FRACTION = 0.25;
 // The charater used to separate dynamic fingerprints. e.x. sargo|aosp-sargo
-static const char* FINGERPRING_SEPARATOR = "|";
+#define FINGERPRING_SEPARATOR "|"
 static std::condition_variable finish_log_temperature;
 static bool isInStringList(const std::string& target_token, const std::string& str_list,
                            const std::string& deliminator);
@@ -219,7 +219,7 @@ bool CheckPackageMetadata(const std::map<std::string, std::string>& metadata, Ot
   auto device = android::base::GetProperty("ro.product.device", "");
   auto pkg_device = get_value(metadata, "pre-device");
   bool product_name_match = false;
-  for (const auto& name : android::base::Split(pkg_device, ",")) {
+  for (const auto& name : android::base::Split(pkg_device, FINGERPRING_SEPARATOR ":" ",")) {
     if (device == android::base::Trim(name)) {
       product_name_match = true;
       break;
